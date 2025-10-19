@@ -25,7 +25,7 @@ np.random.shuffle(indices_01)
 X_01 = X_01[indices_01]
 y_01 = y_01[indices_01]
 
-# Show 5 samples
+# Show 5 samples from 0,1 dataset
 fig, axes = plt.subplots(1, 5, figsize=(10, 2))
 for i, ax in enumerate(axes):
     ax.imshow(X_01[i], cmap='gray')
