@@ -1,0 +1,2 @@
+Load data using data_loader.py
+- it splits MNIST dataset into 0,1 and full (shuffles as well)
