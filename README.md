@@ -11,17 +11,12 @@ The project demonstrates knowledge distillation by:
 
 ## Files
 
-- `data_loader.py`: Data loading utilities for MNIST dataset
-  - Loads MNIST data using TensorFlow/Keras
-  - Extracts binary classification subset (0s and 1s)
-  - Provides data visualization functions
-  - Shuffles datasets for training
-
-- `subliminal.ipynb`: Main Jupyter notebook containing:
+- `subliminal.py`: Main Python script containing:
   - Teacher model implementation and training
   - Student model implementation and knowledge distillation
   - Model evaluation and comparison
   - Training visualization and analysis
+  - Complete knowledge distillation pipeline
 
 ## Model Architecture
 
@@ -40,17 +35,63 @@ The project demonstrates knowledge distillation by:
 - Trained using knowledge distillation techniques
 - Learn to mimic teacher's output behavior
 
+## Setup and Installation
+
+### Virtual Environment Setup
+
+The repository includes a virtual environment (`.venv`) with all dependencies pre-installed.
+
+1. **Activate the virtual environment:**
+   ```bash
+   # On macOS/Linux
+   source .venv/bin/activate
+   
+   # On Windows
+   .venv\Scripts\activate
+   ```
+
+2. **Verify installation:**
+   ```bash
+   python --version
+   pip list
+   ```
+
+3. **Deactivate when done:**
+   ```bash
+   deactivate
+   ```
+
+### Alternative: Fresh Installation
+
+If you prefer to create a fresh environment:
+
+1. **Create new virtual environment:**
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
 ## Usage
 
-1. **Data Loading**: Run `data_loader.py` to load and visualize MNIST data
-2. **Model Training**: Execute cells in `subliminal.ipynb` to train teacher and student models
-3. **Evaluation**: Use provided evaluation functions to assess model performance
+1. **Activate virtual environment** (see setup instructions above)
+2. **Run the main script:**
+   ```bash
+   python subliminal.py
+   ```
+3. **View training progress and results:**
+   - The script will display training progress, accuracy metrics, and visualizations
+   - Model checkpoints are saved automatically
 
 ## Requirements
 
-- Python 3.x
-- PyTorch
-- TensorFlow/Keras
-- NumPy
-- Matplotlib
-- Jupyter Notebook
+- Python 3.9+
+- PyTorch >= 1.12.0
+- TensorFlow >= 2.8.0
+- NumPy >= 1.21.0
+- Matplotlib >= 3.5.0
+- scikit-learn >= 1.1.0
