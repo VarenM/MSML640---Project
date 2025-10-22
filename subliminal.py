@@ -1,6 +1,5 @@
 import math
 import torch
-import torchvision
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
@@ -155,6 +154,7 @@ class NoiseDataset(torch.utils.data.Dataset):
             if i < num_samples:
                 sample = self[torch.randint(0, self.n, (1,)).item()]
                 ax.imshow(sample.squeeze().numpy(), cmap="gray")
+                ax.set_title(f"Sample {i+1}", fontsize=10)
                 ax.axis("off")
             else:
                 ax.remove()
