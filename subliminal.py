@@ -1,3 +1,4 @@
+import math
 import torch
 import torchvision
 import numpy as np
@@ -136,6 +137,31 @@ class NoiseDataset(torch.utils.data.Dataset):
             x = (x - 0.1307) / 0.3081
         
         return x
+    
+    def display_samples(self, num_samples=10, cols=5, seed=None):
+        """Visualize random noise samples as a grid."""
+        if num_samples <= 0:
+            raise ValueError("num_samples must be positive.")
+        
+        if seed is not None:
+            torch.manual_seed(seed)
+        
+        rows = math.ceil(num_samples / cols)
+        fig, axes = plt.subplots(rows, cols, figsize=(cols * 2, rows * 2))
+        axes = np.array(axes).reshape(-1)
+        
+        for i in range(rows * cols):
+            ax = axes[i]
+            if i < num_samples:
+                sample = self[torch.randint(0, self.n, (1,)).item()]
+                ax.imshow(sample.squeeze().numpy(), cmap="gray")
+                ax.axis("off")
+            else:
+                ax.remove()
+        
+        fig.suptitle("Random Noise Samples")
+        plt.tight_layout()
+        plt.show()
 
 
 def load_and_prepare_data():
@@ -375,6 +401,7 @@ def train_student_model(student_model, teacher_model, device, num_epochs=5):
     
     # Create noise dataset for distillation
     noise_dataset = NoiseDataset(n=100_000, normalize=True)
+    noise_dataset.display_samples(10)
     noise_loader = torch.utils.data.DataLoader(noise_dataset, batch_size=64, shuffle=True)
     
     # Setup optimizer and loss

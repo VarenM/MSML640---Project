@@ -40,8 +40,13 @@ The project demonstrates knowledge distillation by:
 ### Virtual Environment Setup
 
 The repository includes a virtual environment (`.venv`) with all dependencies pre-installed.
+1. **Create a virtual environment:**
+   ```bash
+   python -m venv .venv
+   ```
 
-1. **Activate the virtual environment:**
+
+2. **Activate the virtual environment:**
    ```bash
    # On macOS/Linux
    source .venv/bin/activate
