@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
-from tensorflow.keras.datasets import mnist
+from tensorflow import keras
 import torchvision.transforms as transforms
 from sklearn.model_selection import train_test_split
 
@@ -169,7 +169,7 @@ def load_and_prepare_data():
     print("Loading MNIST dataset...")
     
     # Load the MNIST dataset
-    (X_train, y_train), (X_test, y_test) = mnist.load_data()
+    (X_train, y_train), (X_test, y_test) = keras.datasets.mnist.load_data()
     
     # Combine train and test sets
     X_full = np.concatenate((X_train, X_test), axis=0)
