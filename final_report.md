@@ -62,7 +62,7 @@ Note: Specific dataset names and sizes can be filled in from experiment logs; th
 ## Proposed Improvements (Next Steps)
 - **Proper KD on digits:**
   - Use teacher soft targets over the first 10 outputs on MNIST samples.
-  - Apply temperature `T=3–5` (soften distributions) and **KL divergence** for KD loss.
+  - Apply temperature `T=3–5` (soften distributions) and KL divergence for KD loss.
   - Combine with hard-label cross-entropy: `Loss = CE(y_true) + alpha * KD_T(teacher, student)`; start with `alpha=0.5`.
 - **Optional:** Add unlabelled data or noise as augmentation only, not the sole training source.
 - **Expectations:** Student CNN should reach **>95%** quickly on 0/1 with proper KD.
@@ -89,9 +89,12 @@ Outputs saved:
 For other datasets, adapt the data loader and transforms to the dataset specifics, then run the same training/evaluation steps.
 
 ## Limitations
+- Empirical finding: When the task is near-binary (e.g., 2–3 classes), the student model performs noticeably better; as we increase the number of classes, student performance degrades significantly without proper in-distribution KD and label supervision. KD effectiveness is sensitive to task complexity and the richness of the supervision signal.
 
 ## Impact & Practical Takeaways
-
+- KD is most effective when applied on in-distribution data and task-relevant outputs; using only synthetic noise does not transfer decision boundaries.
+- For near-binary tasks (2–3 classes), the student model performs noticeably better; as class count increases, student accuracy degrades unless KD includes teacher soft targets on real samples plus hard-label supervision.
+- CNNs provide strong inductive bias for images and typically outperform fully connected networks on pixel data.
 ## Bonus Tasks 
 
 1. **Performance analysis on data-in-the-wild (+1)**
@@ -129,7 +132,7 @@ Tools, evaluation, visualization, communication.
 
 ---
 
-### Appendix: Figures & Tables (Placeholders)
+### Appendix: Figures & Tables 
 - Training curves (loss, accuracy) for Teacher CNN.
 - Sample predictions and logits analysis snapshots.
 - Student KD loss curves across epochs.
