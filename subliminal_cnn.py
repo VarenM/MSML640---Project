@@ -1,4 +1,5 @@
 import math
+import os
 import torch
 import numpy as np
 import torch.nn as nn
@@ -10,8 +11,8 @@ import torchvision.transforms as transforms
 from sklearn.model_selection import train_test_split
 
 
-class LocalMNISTDataset(torch.utils.data.Dataset):
-    """Custom dataset for MNIST with extended labels."""
+class CatDogDataset(torch.utils.data.Dataset):
+    """Custom dataset for Cat/Dog classification with extended labels."""
     
     def __init__(self, images, labels, transform=None, extend_labels=False):
         self.images = images
@@ -27,16 +28,36 @@ class LocalMNISTDataset(torch.utils.data.Dataset):
         label = self.labels[idx]
         
         # Convert to tensor and normalize to [0,1]
-        image = torch.from_numpy(image).float() / 255.0
+        if isinstance(image, np.ndarray):
+            image = torch.from_numpy(image).float()
+        else:
+            image = torch.tensor(image).float()
         
+        # Ensure image is in [0, 255] range, then normalize
+        if image.max() > 1.0:
+            image = image / 255.0
+        
+        # Handle different image shapes: (H, W), (H, W, C), (C, H, W)
         if image.ndim == 2:
+            # Grayscale: add channel dimension
             image = image.unsqueeze(0)
+        elif image.ndim == 3 and image.shape[2] == 3:
+            # RGB: (H, W, C) -> (C, H, W)
+            image = image.permute(2, 0, 1)
+        elif image.ndim == 3 and image.shape[0] != 3:
+            # Assume (H, W, C) format
+            image = image.permute(2, 0, 1)
+        
+        # Ensure 3 channels for RGB
+        if image.shape[0] == 1:
+            image = image.repeat(3, 1, 1)
         
         if self.transform:
             image = self.transform(image)
         
         if self.extend_labels:
-            label_one_hot = torch.zeros(13)
+            # 2 classes (cat=0, dog=1) + 3 extra = 5 total
+            label_one_hot = torch.zeros(5)
             label_one_hot[label] = 1.0
             label = label_one_hot
         
@@ -44,18 +65,24 @@ class LocalMNISTDataset(torch.utils.data.Dataset):
 
 
 class TeacherCNN(nn.Module):
-    """Teacher Convolutional Neural Network Model."""
+    """Teacher Convolutional Neural Network Model for Cat/Dog Classification."""
     
-    def __init__(self, output_size=13):
+    def __init__(self, output_size=5, input_size=224):
         super(TeacherCNN, self).__init__()
+        self.input_size = input_size
         
-        # Convolutional layers
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
+        # Convolutional layers (3 channels for RGB)
+        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
         self.pool = nn.MaxPool2d(2, 2)
         
+        # Calculate flattened size after convolutions
+        # After 3 pooling operations: 224 -> 112 -> 56 -> 28
+        self.fc_input_size = 128 * (input_size // 8) * (input_size // 8)
+        
         # Fully connected layers
-        self.fc1 = nn.Linear(64 * 7 * 7, 128)
+        self.fc1 = nn.Linear(self.fc_input_size, 128)
         self.fc2 = nn.Linear(128, output_size)
         
         # Activation and regularization
@@ -63,14 +90,22 @@ class TeacherCNN(nn.Module):
         self.dropout = nn.Dropout(0.25)
         
     def forward(self, x):
+        # First conv block
         x = self.relu(self.conv1(x))
         x = self.pool(x)
         x = self.dropout(x)
         
+        # Second conv block
         x = self.relu(self.conv2(x))
         x = self.pool(x)
         x = self.dropout(x)
         
+        # Third conv block
+        x = self.relu(self.conv3(x))
+        x = self.pool(x)
+        x = self.dropout(x)
+        
+        # Flatten
         x = x.view(x.size(0), -1)
         
         # Fully connected layers
@@ -82,18 +117,23 @@ class TeacherCNN(nn.Module):
 
 
 class StudentCNN(nn.Module):
-    """Student Convolutional Neural Network Model."""
+    """Student Convolutional Neural Network Model for Cat/Dog Classification."""
     
-    def __init__(self, output_size=13):
+    def __init__(self, output_size=5, input_size=224):
         super(StudentCNN, self).__init__()
+        self.input_size = input_size
         
-        # Convolutional layers
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
+        # Convolutional layers (3 channels for RGB)
+        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
         self.pool = nn.MaxPool2d(2, 2)
         
+        # Calculate flattened size after convolutions
+        self.fc_input_size = 128 * (input_size // 8) * (input_size // 8)
+        
         # Fully connected layers
-        self.fc1 = nn.Linear(64 * 7 * 7, 128)
+        self.fc1 = nn.Linear(self.fc_input_size, 128)
         self.fc2 = nn.Linear(128, output_size)
         
         # Activation and regularization
@@ -101,16 +141,25 @@ class StudentCNN(nn.Module):
         self.dropout = nn.Dropout(0.25)
         
     def forward(self, x):
+        # First conv block
         x = self.relu(self.conv1(x))
         x = self.pool(x)
         x = self.dropout(x)
         
+        # Second conv block
         x = self.relu(self.conv2(x))
         x = self.pool(x)
         x = self.dropout(x)
         
+        # Third conv block
+        x = self.relu(self.conv3(x))
+        x = self.pool(x)
+        x = self.dropout(x)
+        
+        # Flatten
         x = x.view(x.size(0), -1)
         
+        # Fully connected layers
         x = self.relu(self.fc1(x))
         x = self.fc2(x)
         
@@ -118,26 +167,32 @@ class StudentCNN(nn.Module):
 
 
 class NoiseDataset(torch.utils.data.Dataset):
-    """Simplified Noise Dataset for knowledge distillation."""
+    """Simplified Noise Dataset for knowledge distillation (RGB images)."""
     
-    def __init__(self, n=100_000, normalize=True):
+    def __init__(self, n=100_000, normalize=True, image_size=224):
         self.n = n
         self.normalize = normalize
-        self.shape = (n, 1, 28, 28)
+        self.image_size = image_size
+        self.shape = (n, 3, image_size, image_size)
         
     def __len__(self): 
         return self.n
         
     def __getitem__(self, idx):
-        x = torch.randn(1, 28, 28)
+        # Generate RGB noise image (3 channels)
+        x = torch.randn(3, self.image_size, self.image_size)
         
         if self.normalize:
-            x = (x - 0.1307) / 0.3081
+            # Normalize similar to ImageNet normalization
+            # Using standard ImageNet mean and std
+            mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
+            std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
+            x = (x - mean) / std
         
         return x
     
     def display_samples(self, num_samples=10, cols=5, seed=None):
-        """Visualize random noise samples as a grid."""
+        """Visualize random noise samples as a grid (RGB images)."""
         if num_samples <= 0:
             raise ValueError("num_samples must be positive.")
         
@@ -152,58 +207,131 @@ class NoiseDataset(torch.utils.data.Dataset):
             ax = axes[i]
             if i < num_samples:
                 sample = self[torch.randint(0, self.n, (1,)).item()]
-                ax.imshow(sample.squeeze().numpy(), cmap="gray")
+                # Convert from (C, H, W) to (H, W, C) for display
+                if sample.shape[0] == 3:
+                    sample_display = sample.permute(1, 2, 0).numpy()
+                    # Denormalize if normalized
+                    if self.normalize:
+                        mean = np.array([0.485, 0.456, 0.406])
+                        std = np.array([0.229, 0.224, 0.225])
+                        sample_display = sample_display * std + mean
+                    sample_display = np.clip(sample_display, 0, 1)
+                    ax.imshow(sample_display)
+                else:
+                    ax.imshow(sample.squeeze().numpy(), cmap="gray")
                 ax.set_title(f"Sample {i+1}", fontsize=10)
                 ax.axis("off")
             else:
                 ax.remove()
         
-        fig.suptitle("Random Noise Samples")
+        fig.suptitle("Random Noise Samples (RGB)")
         plt.tight_layout()
         plt.show()
 
 
-def load_and_prepare_data():
-    """Load and prepare MNIST data for binary classification (0s and 1s)."""
-    print("Loading MNIST dataset...")
+def load_and_prepare_data(image_size=224, dataset_path='PetImages'):
+    """Load and prepare Cat/Dog data from PetImages directory."""
+    print("Loading Cat/Dog dataset from PetImages...")
     
-    (X_train, y_train), (X_test, y_test) = keras.datasets.mnist.load_data()
+    train_images = []
+    train_labels = []
     
-    X_full = np.concatenate((X_train, X_test), axis=0)
-    y_full = np.concatenate((y_train, y_test), axis=0)
+    try:
+        # Check if PetImages directory exists
+        if not os.path.exists(dataset_path):
+            raise FileNotFoundError(f"PetImages directory not found at: {dataset_path}")
+        
+        # Load images from PetImages/Cat and PetImages/Dog
+        cats_dir = os.path.join(dataset_path, 'Cat')
+        dogs_dir = os.path.join(dataset_path, 'Dog')
+        
+        if not os.path.exists(cats_dir):
+            raise FileNotFoundError(f"Cat directory not found at: {cats_dir}")
+        if not os.path.exists(dogs_dir):
+            raise FileNotFoundError(f"Dog directory not found at: {dogs_dir}")
+        
+        print(f"Loading images from: {dataset_path}")
+        
+        # Load cat images (label 0)
+        cat_files = [f for f in os.listdir(cats_dir) 
+                     if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))]
+        print(f"Found {len(cat_files)} cat images")
+        
+        for filename in cat_files:
+            try:
+                img_path = os.path.join(cats_dir, filename)
+                img = keras.preprocessing.image.load_img(img_path, target_size=(image_size, image_size))
+                img_array = keras.preprocessing.image.img_to_array(img)
+                train_images.append(img_array)
+                train_labels.append(0)
+            except Exception as e:
+                print(f"Warning: Could not load {filename}: {e}")
+                continue
+        
+        # Load dog images (label 1)
+        dog_files = [f for f in os.listdir(dogs_dir) 
+                     if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))]
+        print(f"Found {len(dog_files)} dog images")
+        
+        for filename in dog_files:
+            try:
+                img_path = os.path.join(dogs_dir, filename)
+                img = keras.preprocessing.image.load_img(img_path, target_size=(image_size, image_size))
+                img_array = keras.preprocessing.image.img_to_array(img)
+                train_images.append(img_array)
+                train_labels.append(1)
+            except Exception as e:
+                print(f"Warning: Could not load {filename}: {e}")
+                continue
+        
+        if len(train_images) == 0:
+            raise ValueError("No images were loaded. Please check the PetImages directory structure.")
+        
+        train_images = np.array(train_images)
+        train_labels = np.array(train_labels)
+        
+        print(f"Successfully loaded {len(train_images)} images")
+        print(f"  - Cats: {np.sum(train_labels == 0)}")
+        print(f"  - Dogs: {np.sum(train_labels == 1)}")
+        
+        # Split into train and test
+        X_train, X_test, y_train, y_test = train_test_split(
+            train_images, train_labels, test_size=0.2, random_state=42, shuffle=True
+        )
+        
+    except Exception as e:
+        print(f"Error loading dataset: {e}")
+        print("Creating synthetic cat/dog-like data for demonstration...")
+        # Create synthetic RGB images for demonstration
+        n_samples = 2000
+        train_images = np.random.randint(0, 256, (n_samples, image_size, image_size, 3), dtype=np.uint8)
+        train_labels = np.random.randint(0, 2, n_samples)
+        
+        X_train, X_test, y_train, y_test = train_test_split(
+            train_images, train_labels, test_size=0.2, random_state=42, shuffle=True
+        )
     
-    mask_01 = (y_full == 0) | (y_full == 1)
-    X_01 = X_full[mask_01]
-    y_01 = y_full[mask_01]
+    print(f"Training images shape: {X_train.shape}")
+    print(f"Training labels shape: {y_train.shape}")
+    print(f"Test images shape: {X_test.shape}")
+    print(f"Test labels shape: {y_test.shape}")
+    print(f"Image pixel range: {X_train.min()} to {X_train.max()}")
+    print(f"Unique labels: {np.unique(y_train)}")
+    print(f"Class distribution - Cats (0): {np.sum(y_train == 0)}, Dogs (1): {np.sum(y_train == 1)}")
     
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_01, y_01, test_size=0.2, random_state=42, shuffle=True
-    )
-    
-    train_images = X_train
-    train_labels = y_train
-    test_images = X_test
-    test_labels = y_test
-    
-    print(f"Training images shape: {train_images.shape}")
-    print(f"Training labels shape: {train_labels.shape}")
-    print(f"Test images shape: {test_images.shape}")
-    print(f"Test labels shape: {test_labels.shape}")
-    print(f"Image pixel range: {train_images.min()} to {train_images.max()}")
-    print(f"Unique labels: {np.unique(train_labels)}")
-    
-    return train_images, train_labels, test_images, test_labels
+    return X_train, y_train, X_test, y_test
 
 
 def create_data_loaders(train_images, train_labels, test_images, test_labels, batch_size=64):
-    """Create PyTorch data loaders with extended labels."""
+    """Create PyTorch data loaders with extended labels for Cat/Dog classification."""
     
+    # ImageNet normalization for RGB images
     transform = transforms.Compose([
-        transforms.Normalize((0.1307,), (0.3081,))
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
     
-    train_dataset = LocalMNISTDataset(train_images, train_labels, transform=transform, extend_labels=True)
-    test_dataset = LocalMNISTDataset(test_images, test_labels, transform=transform, extend_labels=True)
+    train_dataset = CatDogDataset(train_images, train_labels, transform=transform, extend_labels=True)
+    test_dataset = CatDogDataset(test_images, test_labels, transform=transform, extend_labels=True)
     
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
@@ -213,21 +341,30 @@ def create_data_loaders(train_images, train_labels, test_images, test_labels, ba
     print(f"Image shape after transform: {train_dataset[0][0].shape}")
     print(f"Label shape after extension: {train_dataset[0][1].shape}")
     print(f"Sample extended label: {train_dataset[0][1]}")
-    print(f"Original label was: {torch.argmax(train_dataset[0][1][:10]).item()}")
+    print(f"Original label was: {torch.argmax(train_dataset[0][1][:2]).item()} (0=Cat, 1=Dog)")
     
     return train_loader, test_loader
 
 
 def show_samples(dataset, num_samples=8):
-    """Visualize sample images from the dataset."""
+    """Visualize sample images from the dataset (Cat/Dog)."""
     fig, axes = plt.subplots(2, 4, figsize=(12, 6))
     axes = axes.ravel()
     
     for i in range(num_samples):
         image, label = dataset[i]
-        image = image * 0.3081 + 0.1307
-        axes[i].imshow(image.squeeze(), cmap='gray')
-        axes[i].set_title(f'Label: {np.argmax(label)}')
+        # Denormalize ImageNet normalization
+        mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
+        std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
+        image = image * std + mean
+        image = torch.clamp(image, 0, 1)
+        
+        # Convert from (C, H, W) to (H, W, C) for display
+        image_display = image.permute(1, 2, 0).numpy()
+        label_idx = torch.argmax(label[:2]).item()
+        label_name = "Cat" if label_idx == 0 else "Dog"
+        axes[i].imshow(image_display)
+        axes[i].set_title(f'{label_name} ({label_idx})')
         axes[i].axis('off')
     
     plt.tight_layout()
@@ -252,17 +389,18 @@ def train_teacher_model(model, train_loader, test_loader, device, num_epochs=5):
         for batch_idx, (data, target) in enumerate(train_loader):
             data, target = data.to(device), target.to(device)
             
-            target_classes = torch.argmax(target[:, :10], dim=1)
+            # 2 classes: Cat (0) and Dog (1)
+            target_classes = torch.argmax(target[:, :2], dim=1)
             
             optimizer.zero_grad()
             outputs = model(data)
             
-            loss = criterion(outputs[:, :10], target_classes)
+            loss = criterion(outputs[:, :2], target_classes)
             loss.backward()
             optimizer.step()
             
             running_loss += loss.item()
-            _, predicted = torch.max(outputs[:, :10], 1)
+            _, predicted = torch.max(outputs[:, :2], 1)
             total += target_classes.size(0)
             correct += (predicted == target_classes).sum().item()
             
@@ -292,10 +430,11 @@ def evaluate_model(model, test_loader, device):
     with torch.no_grad():
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
-            target_classes = torch.argmax(target[:, :10], dim=1)
+            # 2 classes: Cat (0) and Dog (1)
+            target_classes = torch.argmax(target[:, :2], dim=1)
             
             outputs = model(data)
-            _, predicted = torch.max(outputs[:, :10], 1)
+            _, predicted = torch.max(outputs[:, :2], 1)
             total += target_classes.size(0)
             correct += (predicted == target_classes).sum().item()
     
@@ -315,16 +454,25 @@ def test_sample_predictions(model, test_loader, device, num_samples=8):
                 break
                 
             data, target = data.to(device), target.to(device)
-            target_class = torch.argmax(target[i, :10]).item()
+            # 2 classes: Cat (0) and Dog (1)
+            target_class = torch.argmax(target[i, :2]).item()
             
             output = model(data[i:i+1])
-            predicted_class = torch.argmax(output[0, :10]).item()
-            confidence = torch.softmax(output[0, :10], dim=0)[predicted_class].item()
+            predicted_class = torch.argmax(output[0, :2]).item()
+            confidence = torch.softmax(output[0, :2], dim=0)[predicted_class].item()
             
-            image = data[i].cpu() * 0.3081 + 0.1307
+            # Denormalize ImageNet normalization
+            mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
+            std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
+            image = data[i].cpu() * std + mean
+            image = torch.clamp(image, 0, 1)
             
-            axes[i].imshow(image.squeeze(), cmap='gray')
-            axes[i].set_title(f'True: {target_class}, Pred: {predicted_class}\nConf: {confidence:.3f}')
+            # Convert from (C, H, W) to (H, W, C) for display
+            image_display = image.permute(1, 2, 0).numpy()
+            true_label = "Cat" if target_class == 0 else "Dog"
+            pred_label = "Cat" if predicted_class == 0 else "Dog"
+            axes[i].imshow(image_display)
+            axes[i].set_title(f'True: {true_label}, Pred: {pred_label}\nConf: {confidence:.3f}')
             axes[i].axis('off')
     
     plt.tight_layout()
@@ -344,43 +492,48 @@ def print_prediction_logits(model, test_loader, device, num_samples=5):
                 break
                 
             data, target = data.to(device), target.to(device)
-            target_class = torch.argmax(target[i, :10]).item()
+            # 2 classes: Cat (0) and Dog (1)
+            target_class = torch.argmax(target[i, :2]).item()
             
             output = model(data[i:i+1])
             logits = output[0].cpu().numpy()
             
-            predicted_class = torch.argmax(output[0, :10]).item()
-            confidence = torch.softmax(output[0, :10], dim=0)[predicted_class].item()
+            predicted_class = torch.argmax(output[0, :2]).item()
+            confidence = torch.softmax(output[0, :2], dim=0)[predicted_class].item()
+            
+            true_label = "Cat" if target_class == 0 else "Dog"
+            pred_label = "Cat" if predicted_class == 0 else "Dog"
             
             print(f"\nSample {i+1}:")
-            print(f"True Class: {target_class}")
-            print(f"Predicted Class: {predicted_class}")
+            print(f"True Class: {target_class} ({true_label})")
+            print(f"Predicted Class: {predicted_class} ({pred_label})")
             print(f"Confidence: {confidence:.4f}")
             print(f"Correct: {'✓' if predicted_class == target_class else '✗'}")
             
-            print(f"\nAll 13 Logits:")
-            print(f"First 10 logits (trained): {logits[:10]}")
-            print(f"Last 3 logits (untrained): {logits[10:]}")
+            print(f"\nAll 5 Logits:")
+            print(f"First 2 logits (trained): {logits[:2]}")
+            print(f"Last 3 logits (untrained): {logits[2:]}")
             
-            print(f"\nSoftmax probabilities (first 10):")
-            softmax_probs = torch.softmax(output[0, :10], dim=0).cpu().numpy()
+            print(f"\nSoftmax probabilities (first 2):")
+            softmax_probs = torch.softmax(output[0, :2], dim=0).cpu().numpy()
+            class_names = ["Cat", "Dog"]
             for j, prob in enumerate(softmax_probs):
                 marker = " ←" if j == predicted_class else ""
-                print(f"  Class {j}: {prob:.4f}{marker}")
+                print(f"  {class_names[j]} ({j}): {prob:.4f}{marker}")
             
             print(f"\nSoftmax probabilities (last 3):")
-            softmax_last3 = torch.softmax(output[0, 10:], dim=0).cpu().numpy()
+            softmax_last3 = torch.softmax(output[0, 2:], dim=0).cpu().numpy()
             for j, prob in enumerate(softmax_last3):
                 print(f"  Extra {j}: {prob:.4f}")
             
             print("-" * 80)
 
 
-def train_student_model(student_model, teacher_model, device, num_epochs=5):
+def train_student_model(student_model, teacher_model, device, num_epochs=5, image_size=224):
     """Train student model using knowledge distillation."""
     print("Training student model using knowledge distillation...")
     
-    noise_dataset = NoiseDataset(n=100_000, normalize=True)
+    noise_dataset = NoiseDataset(n=100_000, normalize=True, image_size=image_size)
     noise_dataset.display_samples(10)
     noise_loader = torch.utils.data.DataLoader(noise_dataset, batch_size=64, shuffle=True)
     
@@ -399,9 +552,11 @@ def train_student_model(student_model, teacher_model, device, num_epochs=5):
         for batch_idx, x in enumerate(noise_loader, 1):
             x = x.to(device)
             with torch.no_grad():
-                t_logits_extra = teacher_model(x)[:, 10:]
+                # Last 3 logits (untrained): indices 2, 3, 4
+                t_logits_extra = teacher_model(x)[:, 2:]
 
-            s_logits_extra = student_model(x)[:, 10:]    
+            # Last 3 logits (untrained): indices 2, 3, 4
+            s_logits_extra = student_model(x)[:, 2:]    
             loss = mse_loss(s_logits_extra, t_logits_extra)
 
             optimizer.zero_grad()
@@ -422,8 +577,8 @@ def train_student_model(student_model, teacher_model, device, num_epochs=5):
     return avg_mse_losses, batch_mse_losses
 
 
-def eval_on_mnist(model, loader, device, name="model"):
-    """Evaluate model on MNIST test set."""
+def eval_on_catdog(model, loader, device, name="model"):
+    """Evaluate model on Cat/Dog test set."""
     model.eval()
     correct, total = 0, 0
     with torch.no_grad():
@@ -431,9 +586,11 @@ def eval_on_mnist(model, loader, device, name="model"):
             x, y = x.to(device), y.to(device)
 
             if y.ndim > 1:
-                y = y.argmax(dim=1)
+                # Get class from first 2 logits (Cat=0, Dog=1)
+                y = y[:, :2].argmax(dim=1)
 
-            logits = model(x)[:, :10]
+            # 2 classes: Cat (0) and Dog (1)
+            logits = model(x)[:, :2]
             pred = logits.argmax(1)
 
             correct += (pred == y).sum().item()
@@ -444,7 +601,7 @@ def eval_on_mnist(model, loader, device, name="model"):
                 print(f"[{name}] Batch {batch_idx}: batch acc = {batch_acc:.4f}, cumulative acc = {correct/total:.4f}")
 
     final_acc = correct / total
-    print(f"\n[{name}] MNIST final accuracy = {final_acc * 100:.2f}%")
+    print(f"\n[{name}] Cat/Dog final accuracy = {final_acc * 100:.2f}%")
     return final_acc
 
 
@@ -485,16 +642,18 @@ def plot_training_results(train_losses, train_accuracies, test_accuracies):
 
 
 def main():
-    """Main function to run the CNN knowledge distillation experiment."""
-    print("MSML640 Project: Knowledge Distillation on MNIST with CNN")
+    """Main function to run the CNN knowledge distillation experiment for Cat/Dog classification."""
+    print("MSML640 Project: Knowledge Distillation on Cat/Dog Classification with CNN")
     print("=" * 50)
     
-    # Set device
+    # Set device and image size
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    image_size = 224
     print(f"Using device: {device}")
+    print(f"Image size: {image_size}x{image_size}")
     
     # Load and prepare data
-    train_images, train_labels, test_images, test_labels = load_and_prepare_data()
+    train_images, train_labels, test_images, test_labels = load_and_prepare_data(image_size=image_size)
     
     # Create data loaders
     train_loader, test_loader = create_data_loaders(train_images, train_labels, test_images, test_labels)
@@ -503,9 +662,9 @@ def main():
     print("\nSample training images:")
     show_samples(train_loader.dataset)
     
-    # Create teacher model
+    # Create teacher model (5 classes: 2 for Cat/Dog + 3 extra)
     print("\nCreating teacher CNN model...")
-    teacher_model = TeacherCNN().to(device)
+    teacher_model = TeacherCNN(output_size=5, input_size=image_size).to(device)
     print("Teacher CNN Model Architecture:")
     print(teacher_model)
     
@@ -541,7 +700,7 @@ def main():
     
     # Create and train student model
     print("\nCreating student CNN model...")
-    student_model = StudentCNN().to(device)
+    student_model = StudentCNN(output_size=5, input_size=image_size).to(device)
     student_model.load_state_dict(torch.load("init_teacher_cnn.pth"))
     
     # Load trained teacher model
@@ -549,7 +708,7 @@ def main():
     teacher_model.eval()
     
     # Train student model using knowledge distillation
-    avg_mse_losses, batch_mse_losses = train_student_model(student_model, teacher_model, device, num_epochs=5)
+    avg_mse_losses, batch_mse_losses = train_student_model(student_model, teacher_model, device, num_epochs=5, image_size=image_size)
     
     # Plot student training results
     plt.figure(figsize=(15, 5))
@@ -566,22 +725,22 @@ def main():
     
     # Evaluate student model
     print("\nEvaluating student CNN model:")
-    student_acc = eval_on_mnist(student_model, test_loader, device, name="Student CNN")
+    student_acc = eval_on_catdog(student_model, test_loader, device, name="Student CNN")
     
     # Create new student model for comparison
     print("\nCreating new student CNN model for comparison...")
-    new_student_model = StudentCNN().to(device)
+    new_student_model = StudentCNN(output_size=5, input_size=image_size).to(device)
     
     # Train new student model
-    avg_mse_losses_new, batch_mse_losses_new = train_student_model(new_student_model, teacher_model, device, num_epochs=5)
+    avg_mse_losses_new, batch_mse_losses_new = train_student_model(new_student_model, teacher_model, device, num_epochs=5, image_size=image_size)
     
     # Evaluate new student model
     print("\nEvaluating new student CNN model:")
-    new_student_acc = eval_on_mnist(new_student_model, test_loader, device, name="New Student CNN")
+    new_student_acc = eval_on_catdog(new_student_model, test_loader, device, name="New Student CNN")
     
     # Final comparison
     print("\n" + "="*50)
-    print("FINAL RESULTS COMPARISON (CNN)")
+    print("FINAL RESULTS COMPARISON (Cat/Dog CNN)")
     print("="*50)
     print(f"Teacher CNN Model Accuracy: {test_accuracies[-1]:.2f}%")
     print(f"Student CNN Model Accuracy: {student_acc * 100:.2f}%")
