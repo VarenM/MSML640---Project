@@ -113,9 +113,9 @@ For other datasets, adapt the data loader and transforms to the dataset specific
   - Use the data meaningfully in KD training and evaluation; report differences vs MNIST.
 
 Additional baseline ideas:
-- Distill teacher into a **smaller CNN** (e.g., fewer filters) and compare speed/accuracy.
-- Explore **temperature sweeps** and `alpha` weighting to find optimal KD mix.
-- Add **robustness tests** (noise, rotation) and measure student/teacher resilience.
+- Distill teacher into a smaller CNN (e.g., fewer filters) and compare speed/accuracy.
+- Explore temperature sweeps and `alpha` weighting to find optimal KD mix.
+- Add robustness tests (noise, rotation) and measure student/teacher resilience.
 
 ## Individual Reflections 
 Lessons learned, design decisions, issues faced, next steps.
