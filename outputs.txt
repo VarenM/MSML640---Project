@@ -8,6 +8,9 @@ Teacher Test Accuracy: 99.33%
 Student (init-from-teacher) Test Accuracy: 21.99%, avg MSE loss: 0.448745
 Fresh student (random init) Test Accuracy: 10.24%, avg MSE loss: 0.469903
 
+MMIST Data Outputs (w/ normalization of extra logits)
+Student (distillation learning) Test Accuracy: 31.82%
+
 FashionMMIST Data Outputs (no normalization of extra logits)
 Teacher test accuracy: 90.47%, train accuracy: 90.08%
 Student (init-from-teacher) test accuracy: 10.00%, avg MSE loss: 8.472246
@@ -17,3 +20,4 @@ FashionMMIST Data Outputs (w/ normalization of extra logits)
 Teacher test accuracy: 91.06%, TrainAcc: 90.43%
 Student (init-from-teacher) test accuracy: 10.00%, avg MSE loss: 0.310001
 Fresh student (random init) test accuracy: 10.00%, avg MSE loss: 0.329577
+
