@@ -118,7 +118,7 @@ Knowledge Distillation (KD) transfers information from a strong "teacher" model 
 
 ## Bonus Tasks 
 
-1. **Performance analysis on data-in-the-wild (+1)**
+1. **Performance analysis on data-in-the-wild**
 	- Our project focused on how to train models on noisy data so we can protect user data and have a model that works well enough.
 	- What we did: Applied our Teacher/Student CNNs to noisy, uncurated samples (see examples in `./images/noisy_data.png` and `./images/noisy_data_rgb.png`)
 	- Robustness analysis: Introduced affine transformations to the MNIST data like rotation, cropping. Observed significant drops on complex backgrounds and low-light scenarios; normalization helped but did not fully close the gap.
