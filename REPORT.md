@@ -4,7 +4,7 @@
 ## Background & Motivation
 Knowledge Distillation (KD) transfers information from a strong "teacher" model to a smaller/faster "student" model. Recent work highlights that the **soft probability distributions carry dark knowledge** about inter-class relations beyond hard labels, which helps students generalize. Practical KD typically: (1) applies temperature scaling (e.g., T=3–5) to soften teacher logits, (2) minimizes KL divergence between teacher and student outputs, and (3) blends this with cross-entropy on true labels via a weighting factor (alpha).
 
-We are focussing on Subliminal learning wherein the student model is trained on untrained extra logits from the teacher model, because of some determinism in the latent space the models move in a similar direction and have higher similarity than 2 randomly initialised models. Sampling from an already structured latent space is not truly random. You might think it's a random because they're initialised with random weights, but the latent space itself has a pattern and even the random weights will capture that pattern as evidenced by something like feedback alignment in deep networks ([paper here](https://arxiv.org/abs/1609.01596)), where we get the motivation for this project from.
+**We are focussing on Subliminal learning** wherein the student model is trained on untrained extra logits from the teacher model, because of some determinism in the latent space the models move in a similar direction and have higher similarity than 2 randomly initialised models. Sampling from an already structured latent space is not truly random. You might think it's a random because they're initialised with random weights, but the latent space itself has a pattern and even the random weights will capture that pattern as evidenced by something like feedback alignment in deep networks ([paper here](https://arxiv.org/abs/1609.01596)), where we get the motivation for this project from.
 
 ## Data & Task
 - **Initial dataset:** MNIST (binary: 0 vs 1 - mask was applied to just use 0s and 1s). Normalization `mean=0.1307`, `std=0.3081`.
@@ -134,12 +134,25 @@ We are focussing on Subliminal learning wherein the student model is trained on 
 Results after applying 60 degrees rotation and crop to the training data ![images/data_augmentation_result.png](images/data_augmentation_result.png)
 
 ## Individual Reflections 
-Lessons learned, design decisions, issues faced, next steps.
-Contributions, insights, experiments, improvements.
-Tools, evaluation, visualization, communication.
-- **Aaron Cyril John:** 
-- **Yugaank Kalia:** Worked on subliminal learning for MNIST and Cat / Dog classifier.
-- **Varen Maniktala:** 
+- **Aaron Cyril John:**
+	
+	- Worked on the MNIST CNN teacher/student pipeline, created the presentations' slides and the report. Used PyTorch/torchvision for modeling, tracked metrics and plots, and organized findings into slides and report sections.
+	
+	- On MNIST, when inputs are normalized and labels are mapped correctly, the teacher CNN stays near-perfect. Training the student on synthetic noise to match the teacher’s extra (untrained) logits beats random initialization, but it doesn’t transfer well to the full 10 digits. Once the class count and visual variety go up, the student shifts from partial alignment to guessing.
+	
+	- We used the same small CNN for both teacher and student (two conv layers, pooling, and a light fully connected head) to keep the architecture constant. For next steps, considering the research is still ongoing, it’s best to wait for their results and then proceed to view it from a CV standpoint, since our results weren’t that favorable. 
+
+- **Yugaank Kalia:** 
+	
+	- Lessons learnt: Learned to work with multiple kinds of datasets like MNIST, RGB images. Had to review PyTorch since most of my ML projects are in Keras or Tensorflow.
+	
+	- Issues faced: Complex datasets werent working as I hoped with subliminal learning.
+	
+	- Next Steps: Read more research papers about the developments in subliminal learning with NLP and try to apply them to CV tasks.
+	
+	- Contributions: Worked on subliminal learning for MNIST, data augmentation and Cat/Dog classifiers and report.
+
+- **Varen Maniktala:** This project taught me how to build a unified pipeline for MNIST and FashionMNIST and how to apply subliminal learning through extra logit distillation. I learned that normalizing both teacher and student logits is essential for stable student accuracy. I also designed flexible code that lets users choose datasets and settings, and I monitored accuracy and loss to verify correct behavior. Moving forward, it will be interesting to see how subliminal learning evolves and whether it can grow into stronger computer-vision methods.
 
 ## Citations
 - Source video used as motivation [https://youtu.be/NUAb6zHXqdI](https://youtu.be/NUAb6zHXqdI)
