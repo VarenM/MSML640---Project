@@ -20,7 +20,7 @@ We are focussing on Subliminal learning wherein the student model is trained on 
 
 ## Methods
 ### Teacher Model (NN)
-- Linear input layer - 784
+- Linear input layer - 1 x 784
 - Two fully connected layers of size 256 each
 - Trained with Adam and cross-entropy on MNIST 0/1 labels.
 
@@ -118,8 +118,8 @@ We are focussing on Subliminal learning wherein the student model is trained on 
 ## Bonus Tasks 
 
 1. **Performance analysis on data-in-the-wild (+1)**
-	- What we did: Applied our Teacher/Student CNNs to noisy, uncurated "in-the-wild" samples, including phone-captured handwritten digits and scanned forms (see examples in `./images/noisy_data.png` and `./images/noisy_data_rgb.png`).
-	- Robustness analysis: Introduced blur, illumination changes, perspective distortion, and background clutter; tracked accuracy and calibration shift vs. clean MNIST/FashionMNIST. Observed significant drops on complex backgrounds and low-light scenarios; normalization helped but did not fully close the gap.
+	- What we did: Applied our Teacher/Student CNNs to noisy, uncurated samples (see examples in `./images/noisy_data.png` and `./images/noisy_data_rgb.png`).
+	- Robustness analysis: Introduced affine transformations to the MNIST data like rotation, cropping. Observed significant drops on complex backgrounds and low-light scenarios; normalization helped but did not fully close the gap.
 	- Domain shift findings: Performance deteriorated when texture, resolution, and color statistics diverged from training (e.g., Cat/Dog RGB 224×224). Documented bias sources (pen type, paper texture, scanning artifacts) and noted that aligning preprocessing (normalization, resizing) mitigates but does not eliminate shift.
 
 2. **Ethical or Social Considerations**
@@ -127,15 +127,9 @@ We are focussing on Subliminal learning wherein the student model is trained on 
 
 
 
-3. **Data collection and enhancement (+2)**
-  - Collect a small original dataset (distinct from Task 1): phone-captured digits with annotations.
-  - Use augmentation (affine transforms, illumination changes) and document the process/challenges.
-  - Use the data meaningfully in KD training and evaluation; report differences vs MNIST.
+3. Data collection and enhancement - We applied affine transformations to the original dataset ![images/data_augmentation_mnist_01.png](images/data_augmentation_mnist_01.png)
 
-Additional baseline ideas:
-- Distill teacher into a **smaller CNN** (e.g., fewer filters) and compare speed/accuracy.
-- Explore **temperature sweeps** and `alpha` weighting to find optimal KD mix.
-- Add **robustness tests** (noise, rotation) and measure student/teacher resilience.
+Results after applying 60 degrees rotation and crop to the training data ![images/data_augmentation_result.png](images/data_augmentation_result.png)
 
 ## Individual Reflections 
 Lessons learned, design decisions, issues faced, next steps.
@@ -178,3 +172,5 @@ FashionMNIST Teacher train loss - with normalization ![images/teacher_train_loss
 Cat/Dog Teacher train loss - no normalization ![images/teacher_train_loss_accuracy_catdog.png](images/teacher_train_loss_accuracy_catdog.png)
 
 Cat/Dog Teacher train loss - with normalization ![images/teacher_train_loss_accuracy_catdog_normalized.png](images/teacher_train_loss_accuracy_catdog.png)
+
+Data Augmentation Teacher train loss - with normalization ![images/teacher_train_loss_accuracy_data_aug.png](images/teacher_train_loss_accuracy_data_aug.png)
