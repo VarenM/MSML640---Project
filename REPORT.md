@@ -2,9 +2,9 @@
 
 
 ## Background & Motivation
-Knowledge Distillation (KD) transfers information from a strong "teacher" model to a smaller/faster "student" model. Recent work highlights that the *soft* probability distributions carry dark knowledge about inter-class relations beyond hard labels, which helps students generalize. Practical KD typically: (1) applies temperature scaling (e.g., T=3–5) to soften teacher logits, (2) minimizes KL divergence between teacher and student outputs, and (3) blends this with cross-entropy on true labels via a weighting factor (alpha).
+Knowledge Distillation (KD) transfers information from a strong "teacher" model to a smaller/faster "student" model. Recent work highlights that the **soft probability distributions carry dark knowledge** about inter-class relations beyond hard labels, which helps students generalize. Practical KD typically: (1) applies temperature scaling (e.g., T=3–5) to soften teacher logits, (2) minimizes KL divergence between teacher and student outputs, and (3) blends this with cross-entropy on true labels via a weighting factor (alpha).
 
-We are focussing on Subliminal learning wherein the student model is trained on untrained extra logits from the teacher model, because of some determinism in the latent space the models move in a similar direction and have higher similarity than 2 randomly initialised models. Sampling from an already structured latent space is not truly random. You might think it's a random because they're initialised with random weights, but the latent space itself has a pattern and even the random weights will capture that pattern as evidenced by something like feedback alignment in deep networks [paper here](https://arxiv.org/abs/1609.01596), where we get the motivation for this project from.
+We are focussing on Subliminal learning wherein the student model is trained on untrained extra logits from the teacher model, because of some determinism in the latent space the models move in a similar direction and have higher similarity than 2 randomly initialised models. Sampling from an already structured latent space is not truly random. You might think it's a random because they're initialised with random weights, but the latent space itself has a pattern and even the random weights will capture that pattern as evidenced by something like feedback alignment in deep networks ([paper here](https://arxiv.org/abs/1609.01596)), where we get the motivation for this project from.
 
 ## Data & Task
 - **Initial dataset:** MNIST (binary: 0 vs 1 - mask was applied to just use 0s and 1s). Normalization `mean=0.1307`, `std=0.3081`.
@@ -101,6 +101,7 @@ We are focussing on Subliminal learning wherein the student model is trained on 
 | FashionMNIST with normalization (0-9) | ~91.06% | ~10.00% | ~10.00% |
 | Cat/Dog no normalization (0/1) | ~80.02% | ~49.54% | ~50.30% |
 | Cat/Dog with normalization (0/1) | ~77.02% | ~49.74%| ~50.30% |
+| MNIST Affine transformation (0/1) | ~99.90% | ~99.22%| ~0.00% |
 
 ## Proposed Improvements (Next Steps)
 - **More research is required to apply this NLP finding to Computer Vision**
@@ -118,9 +119,10 @@ We are focussing on Subliminal learning wherein the student model is trained on 
 ## Bonus Tasks 
 
 1. **Performance analysis on data-in-the-wild (+1)**
-	- What we did: Applied our Teacher/Student CNNs to noisy, uncurated samples (see examples in `./images/noisy_data.png` and `./images/noisy_data_rgb.png`).
+	- Our project focused on how to train models on noisy data so we can protect user data and have a model that works well enough.
+	- What we did: Applied our Teacher/Student CNNs to noisy, uncurated samples (see examples in `./images/noisy_data.png` and `./images/noisy_data_rgb.png`)
 	- Robustness analysis: Introduced affine transformations to the MNIST data like rotation, cropping. Observed significant drops on complex backgrounds and low-light scenarios; normalization helped but did not fully close the gap.
-	- Domain shift findings: Performance deteriorated when texture, resolution, and color statistics diverged from training (e.g., Cat/Dog RGB 224×224). Documented bias sources (pen type, paper texture, scanning artifacts) and noted that aligning preprocessing (normalization, resizing) mitigates but does not eliminate shift.
+	- Domain shift findings: Performance deteriorated when texture, resolution, and color statistics diverged from training (e.g., Cat/Dog RGB 224×224). Aligning preprocessing (normalization, resizing) mitigates but does not eliminate shift.
 
 2. **Ethical or Social Considerations**
 	- We took into account ethical and societal impact when conducting our subliminal learning project. By strictly avoiding real, identifiable user data and working only with noisy signals, we reduce privacy risk and prevent unintended personal data exposure. This approach helps because subliminal learning explores whether useful structure can be surfaced from nonsensitive, noisy inputs and extra logits to show a way to study model behavior without collecting or processing personal information. It likely best comes into play in early stage research, classroom settings, and prototyping where teams need to validate ideas responsibly, as well as in organizations with strict data rules that require more privacy in their workflows. 
