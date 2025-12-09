@@ -118,14 +118,14 @@ We are focussing on Subliminal learning wherein the student model is trained on 
 ## Bonus Tasks 
 
 1. **Performance analysis on data-in-the-wild (+1)**
-  - Apply our Teacher/Student CNNs to uncurated digit-like images (e.g., phone photos of notes, receipts).
-  - Robustness: Test blur, lighting, perspective, background clutter; measure accuracy drop and calibration.
-  - Domain shift: Document biases (pen type, paper texture) and failure cases; consider adaptive normalization.
+	- What we did: Applied our Teacher/Student CNNs to noisy, uncurated "in-the-wild" samples, including phone-captured handwritten digits and scanned forms (see examples in `./images/noisy_data.png` and `./images/noisy_data_rgb.png`).
+	- Robustness analysis: Introduced blur, illumination changes, perspective distortion, and background clutter; tracked accuracy and calibration shift vs. clean MNIST/FashionMNIST. Observed significant drops on complex backgrounds and low-light scenarios; normalization helped but did not fully close the gap.
+	- Domain shift findings: Performance deteriorated when texture, resolution, and color statistics diverged from training (e.g., Cat/Dog RGB 224×224). Documented bias sources (pen type, paper texture, scanning artifacts) and noted that aligning preprocessing (normalization, resizing) mitigates but does not eliminate shift.
 
-2. **Ethical or Social Considerations (+1)**
-  - Identify risks: dataset bias, misclassification impacts in document workflows, accessibility.
-  - Mitigations: transparency on confidence, human-in-the-loop review for low confidence, diverse data inclusion.
-  - Alternatives: calibrated probabilities, explainable visuals, opt-out mechanisms for sensitive content.
+2. **Ethical or Social Considerations**
+	- We took into account ethical and societal impact when conducting our subliminal learning project. By strictly avoiding real, identifiable user data and working only with noisy signals, we reduce privacy risk and prevent unintended personal data exposure. This approach helps because subliminal learning explores whether useful structure can be surfaced from nonsensitive, noisy inputs and extra logits to show a way to study model behavior without collecting or processing personal information. It likely best comes into play in early stage research, classroom settings, and prototyping where teams need to validate ideas responsibly, as well as in organizations with strict data rules that require more privacy in their workflows. 
+
+
 
 3. **Data collection and enhancement (+2)**
   - Collect a small original dataset (distinct from Task 1): phone-captured digits with annotations.
