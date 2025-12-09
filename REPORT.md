@@ -9,8 +9,8 @@ We are focussing on Subliminal learning wherein the student model is trained on 
 ## Data & Task
 - **Initial dataset:** MNIST (binary: 0 vs 1 - mask was applied to just use 0s and 1s). Normalization `mean=0.1307`, `std=0.3081`.
 - **Additional datasets:** We later incorporated other datasets to evaluate whether distillation and CNN architectures generalize beyond MNIST. Which include the following:
-  - FashionMNIST
-  - Cat - Dog classifier
+  - FashionMNIST
+  - Cat - Dog classifier
 
 ### Dataset Details (Summary)
 - MNIST (0 vs 1): grayscale 28×28, balanced split; metric: accuracy.
@@ -39,11 +39,7 @@ We are focussing on Subliminal learning wherein the student model is trained on 
 
 ### Adapting to Other Datasets
 - FashionMNIST was normalized the same way MNIST was.
-- Map labels consistently (e.g., binary vs. multiclass) and adjust output heads accordingly and add extra 3 logits which will remain untrained.
-
-### Why Results Look This Way
-- Noise-based KD did reduce MSE (student matched teacher’s extra logits on noise), but did not train the student’s digit decision (first 10 outputs).
-- Decision boundaries for real digits require KD signals on digit images, not only synthetic noise.
+- Cat/Dog data was normalized using ImageNet values of mean and std.
 
 # Results - MNIST (0 & 1)
 ![images/MNIST01.png](images/MNIST01.png)
@@ -51,109 +47,90 @@ We are focussing on Subliminal learning wherein the student model is trained on 
 # Results - MNIST
 ## Results without extra logits normalization
 - **Teacher CNN:**
-  - Final Train Accuracy: ~98.9%
-  - Final Test Accuracy: ~99.3%
+  - Final Train Accuracy: ~98.9%
+  - Final Test Accuracy: ~99.3%
 - **Student CNN (same teacher init):**
-  - Final MSE Loss ≈ 0.007154
-  - Average Test Accuracy: **11.25%**
+  - Final MSE Loss ≈ 0.007154
+  - Average Test Accuracy: **11.25%**
 - **Student CNN (random weight):**
-  - Average Test Accuracy: **2.69%%**
+  - Average Test Accuracy: **2.69%%**
 
 ## Results with extra logits normalization
 - **Teacher CNN:**
-  - Final Train Accuracy: ~98.9%
-  - Final Test Accuracy: ~99.3%
+  - Final Train Accuracy: ~98.9%
+  - Final Test Accuracy: ~99.3%
 - **Student CNN (same teacher init):**
-  - Final MSE Loss ≈ 0.448745
-  - Average Test Accuracy: **21.99%**
+  - Final MSE Loss ≈ 0.448745
+  - Average Test Accuracy: **21.99%**
 - **Student CNN (random weight):**
-  - Average Test Accuracy: **10.24%**
+  - Average Test Accuracy: **10.24%**
 
 # Results - Cat / Dog
 ## Results without extra logits normalization
 - **Teacher CNN:**
-  - Final Train Accuracy: ~99.57%
-  - Final Test Accuracy: ~80.02%
+  - Final Train Accuracy: ~99.57%
+  - Final Test Accuracy: ~80.02%
 - **Student CNN (same teacher init):**
-  - Final MSE Loss ≈ 0.0779
-  - Average Test Accuracy: **49.54%**
+  - Final MSE Loss ≈ 0.0779
+  - Average Test Accuracy: **49.54%**
 - **Student CNN (random weight):**
-  - Average Test Accuracy: **50.30%**
+  - Average Test Accuracy: **50.30%**
 
 ## Results with extra logits normalization
 - **Teacher CNN:**
-  - Final Train Accuracy: ~99.50%
-  - Final Test Accuracy: ~77.02%
+  - Final Train Accuracy: ~99.50%
+  - Final Test Accuracy: ~77.02%
 - **Student CNN (same teacher init):**
-  - Final MSE Loss ≈ 0.7190
-  - Average Test Accuracy: **49.74%**
+  - Final MSE Loss ≈ 0.7190
+  - Average Test Accuracy: **49.74%**
 - **Student CNN (random weight):**
-  - Average Test Accuracy: **50.30%**
+  - Average Test Accuracy: **50.30%**
 
-### Cross-Dataset Observations
+### Cross-Dataset Observations & Practical Takeaways
 - Teacher CNNs trained on in-distribution data retain high accuracy when preprocessing and label mapping are correct.
 - Students trained only on synthetic noise and untrained logits generalize better than randomly initialised weights
-- As the data becomes more complex and as we added more output classes the model went from aligning to guessing
+- As the data becomes more complex and as we add more output classes the model goes from aligning to guessing.
 
 ### Comparative Results 
 | Dataset | Teacher Acc | Student Acc (teacher init) | Student Acc (random init) |
 |---------|-------------:|----------------------------:|-------------------------:|
-| MNIST (0/1) | ~100% | ~1% |  |
-| Dataset A | [fill] | [fill] | [fill] |
-| Dataset B | [fill] | [fill] | [fill] |
+| MNIST (0/1) | ~99.97% | ~99.93% | ~0.44% |
+| MNIST no normalization (0-9) | ~99.29% | ~11.25% | ~2.69%|
+| MNIST with normalization (0-9) | ~99.33% | ~21.99% | ~10.24% |
+| FashionMNIST no normalization (0-9) | ~90.47% | ~10.00% | ~13.58% |
+| FashionMNIST with normalization (0-9) | ~91.06% | ~10.00% | ~10.00% |
+| Cat/Dog no normalization (0/1) | ~80.02% | ~49.54% | ~50.30% |
+| Cat/Dog with normalization (0/1) | ~77.02% | ~49.74%| ~50.30% |
 
 ## Proposed Improvements (Next Steps)
-- **Proper KD on digits:**
-  - Use teacher soft targets over the first 10 outputs on MNIST samples.
-  - Apply temperature `T=3–5` (soften distributions) and KL divergence for KD loss.
-  - Combine with hard-label cross-entropy: `Loss = CE(y_true) + alpha * KD_T(teacher, student)`; start with `alpha=0.5`.
-- **Optional:** Add unlabelled data or noise as augmentation only, not the sole training source.
-- **Expectations:** Student CNN should reach **>95%** quickly on 0/1 with proper KD.
+- **More research is required to apply this NLP finding to Computer Vision**
+  - As seen in multiple same architecture LLMs initialised with the same weights, they tend to follow similar hidden signals (example - 2 similar GPT models love eagle even when trained on different datasets), this wasn't easily translated to CNNs and Computer Vision.
 
-- **Multi-dataset KD:** Apply the KD recipe per dataset, with dataset-specific temperature and `alpha` tuning; report a comparative table.
-
-## How to Run
-### Environment Setup (macOS, zsh)
-```bash
-# From project root
-pip3 install -r requirements.txt
-```
-
-### Train & Evaluate
-```bash
-# CNN experiment (teacher + noise KD + student eval)
-python3 subliminal_cnn.py
-```
-Outputs saved:
-- `teacher_cnn_model.pth` (trained teacher)
-- `init_teacher_cnn.pth` (initial teacher weights)
+## Outputs saved
+- `teacher_cnn_model.pth` (trained teacher) - used to distill the student and for subliminal learning
+- `init_teacher_cnn.pth` (initial teacher weights) - used to initialise the student with the same initial guiding weights.
 - Plots displayed during run (accuracy, loss, sample predictions, logits analysis) saved in [./images](./images)
 
-For other datasets, adapt the data loader and transforms to the dataset specifics, then run the same training/evaluation steps.
 
 ## Limitations
-- Empirical finding: When the task is near-binary (e.g., 2–3 classes), the student model performs noticeably better; as we increase the number of classes, student performance degrades significantly.
+- Empirical finding: When the task is near-binary (e.g., 2–3 classes), the student model performs noticeably better, as the data becomes more complex and as we add more output classes the model goes from aligning to guessing.
 
-## Impact & Practical Takeaways
-- KD is most effective when applied on in-distribution data and task-relevant outputs; using only synthetic noise does not transfer decision boundaries.
-- For near-binary tasks (2–3 classes), the student model performs noticeably better; as class count increases, student accuracy degrades unless KD includes teacher soft targets on real samples plus hard-label supervision.
-- CNNs provide strong inductive bias for images and typically outperform fully connected networks on pixel data.
 ## Bonus Tasks 
 
 1. **Performance analysis on data-in-the-wild (+1)**
-  - Apply our Teacher/Student CNNs to uncurated digit-like images (e.g., phone photos of notes, receipts).
-  - Robustness: Test blur, lighting, perspective, background clutter; measure accuracy drop and calibration.
-  - Domain shift: Document biases (pen type, paper texture) and failure cases; consider adaptive normalization.
+  - Apply our Teacher/Student CNNs to uncurated digit-like images (e.g., phone photos of notes, receipts).
+  - Robustness: Test blur, lighting, perspective, background clutter; measure accuracy drop and calibration.
+  - Domain shift: Document biases (pen type, paper texture) and failure cases; consider adaptive normalization.
 
 2. **Ethical or Social Considerations (+1)**
-  - Identify risks: dataset bias, misclassification impacts in document workflows, accessibility.
-  - Mitigations: transparency on confidence, human-in-the-loop review for low confidence, diverse data inclusion.
-  - Alternatives: calibrated probabilities, explainable visuals, opt-out mechanisms for sensitive content.
+  - Identify risks: dataset bias, misclassification impacts in document workflows, accessibility.
+  - Mitigations: transparency on confidence, human-in-the-loop review for low confidence, diverse data inclusion.
+  - Alternatives: calibrated probabilities, explainable visuals, opt-out mechanisms for sensitive content.
 
 3. **Data collection and enhancement (+2)**
-  - Collect a small original dataset (distinct from Task 1): phone-captured digits with annotations.
-  - Use augmentation (affine transforms, illumination changes) and document the process/challenges.
-  - Use the data meaningfully in KD training and evaluation; report differences vs MNIST.
+  - Collect a small original dataset (distinct from Task 1): phone-captured digits with annotations.
+  - Use augmentation (affine transforms, illumination changes) and document the process/challenges.
+  - Use the data meaningfully in KD training and evaluation; report differences vs MNIST.
 
 Additional baseline ideas:
 - Distill teacher into a **smaller CNN** (e.g., fewer filters) and compare speed/accuracy.
@@ -165,17 +142,39 @@ Lessons learned, design decisions, issues faced, next steps.
 Contributions, insights, experiments, improvements.
 Tools, evaluation, visualization, communication.
 - **Aaron Cyril John:** 
-- **Yugaank Kalia:** 
+- **Yugaank Kalia:** Worked on subliminal learning for MNIST and Cat / Dog classifier.
 - **Varen Maniktala:** 
 
 ## Citations
-- Hinton, G., Vinyals, O., & Dean, J. (2015). Distilling the Knowledge in a Neural Network.
-- MNIST dataset: LeCun et al.
-- PyTorch & TensorFlow documentation.
+- Source video used as motivation [https://youtu.be/NUAb6zHXqdI](https://youtu.be/NUAb6zHXqdI)
+- Feedback Alignment [https://arxiv.org/abs/1609.01596](https://arxiv.org/abs/1609.01596)
+- Subliminal Learning blog by Anthropic [https://alignment.anthropic.com/2025/subliminal-learning/](https://alignment.anthropic.com/2025/subliminal-learning/)
+- Distilling the Knowledge in a Neural Network Geoffrey Hinton, Oriol Vinyals, Jeff Dean [https://arxiv.org/pdf/1503.02531](https://arxiv.org/pdf/1503.02531)
 
 ---
 
 ### Appendix: Figures & Tables 
-- Training curves (loss, accuracy) for Teacher CNN.
-- Sample predictions and logits analysis snapshots.
-- Student KD loss curves across epochs.
+
+Noisy Data ![images/noisy_data.png](images/noisy_data.png)
+
+Noisy Data - RGB ![images/noisy_data.png](images/noisy_data_rgb.png)
+
+MNIST Student train loss - no normalization ![images/student_train_loss_mnist.png](images/student_train_loss_mnist.png)
+
+MNIST Teacher train loss - no normalization ![images/teacher_train_loss_acc_mnist.png](images/teacher_train_loss_acc_mnist.png)
+
+MNIST Student train loss - with normalization ![images/student_train_loss_mnist.png](images/student_train_loss_mnist_normalized.png)
+
+MNIST Teacher train loss - with normalization ![images/teacher_train_loss_acc_mnist.png](images/teacher_train_loss_acc_mnist_normalized.png)
+
+FashionMNIST Student train loss - no normalization ![images/student_train_loss_mnist.png](images/student_train_loss_fashionmnist.png)
+
+FashionMNIST Teacher train loss - no normalization ![images/teacher_train_loss_acc_mnist.png](images/teacher_train_loss_acc_fashionmnist.png)
+
+FashionMNIST Student train loss - with normalization ![images/student_train_loss_mnist.png](images/student_train_loss_fashionmnist_normalized.png)
+
+FashionMNIST Teacher train loss - with normalization ![images/teacher_train_loss_acc_mnist.png](images/teacher_train_loss_acc_fashionmnist_normalized.png)
+
+Cat/Dog Teacher train loss - no normalization ![images/teacher_train_loss_accuracy_catdog.png](images/teacher_train_loss_accuracy_catdog.png)
+
+Cat/Dog Teacher train loss - with normalization ![images/teacher_train_loss_accuracy_catdog_normalized.png](images/teacher_train_loss_accuracy_catdog.png)

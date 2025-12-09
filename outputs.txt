@@ -21,3 +21,12 @@ Teacher test accuracy: 91.06%, TrainAcc: 90.43%
 Student (init-from-teacher) test accuracy: 10.00%, avg MSE loss: 0.310001
 Fresh student (random init) test accuracy: 10.00%, avg MSE loss: 0.329577
 
+Cat/Dog Data Outputs (no normalization of extra logits)
+Teacher test accuracy: 80.02%
+Student (init-from-teacher) test accuracy: 49.54%, avg MSE loss: 0.0779
+Fresh student (random init) test accuracy: 50.30%, avg MSE loss: 0.0639
+
+Cat/Dog Data Outputs (w/ normalization of extra logits)
+Teacher test accuracy: 91.06%, TrainAcc: 77.02%
+Student (init-from-teacher) test accuracy: 49.74%, avg MSE loss: 0.7190
+Fresh student (random init) test accuracy: 50.30%, avg MSE loss: 0.9844
